@@ -1,60 +1,70 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT İndirici</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube İndirici</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
-  <div class="max-w-md w-full p-8 bg-gray-900 rounded-3xl border border-gray-700">
-    <h1 class="text-3xl font-bold text-red-500 text-center mb-8">YouTube İndirici</h1>
-    
-    <input type="text" id="url" 
-           placeholder="YouTube linkini yapıştır..."
-           class="w-full px-5 py-4 bg-gray-800 rounded-2xl border border-gray-600 focus:border-red-500 outline-none mb-6">
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <h1 class="text-2xl font-bold text-center mb-6 text-red-500">YouTube İndirici</h1>
+        
+        <input type="text" id="link" placeholder="YouTube linki..." 
+            class="w-full p-3 rounded bg-gray-700 border border-gray-600 mb-4 text-white">
+        
+        <button onclick="ara()" class="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-bold mb-4">
+            Ara
+        </button>
 
-    <button onclick="indir()" 
-            class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-bold text-lg">
-      İndirme Linki Getir
-    </button>
+        <div id="loading" class="hidden text-center text-yellow-400">Yükleniyor...</div>
+        <div id="sonuc" class="space-y-2"></div>
+    </div>
 
-    <div id="result" class="mt-8"></div>
-  </div>
+    <script>
+        // Not: Deploydan sonra bu URL'yi Render'ın verdiği adresle değiştir
+        const API_URL = window.location.origin; 
 
-  <script>
-    async function indir() {
-      const url = document.getElementById('url').value.trim();
-      const result = document.getElementById('result');
+        async function ara() {
+            const link = document.getElementById('link').value;
+            const loading = document.getElementById('loading');
+            const sonuc = document.getElementById('sonuc');
+            
+            if(!link.includes('youtube')) return alert('Geçerli YouTube linki gir!');
+            
+            loading.classList.remove('hidden');
+            sonuc.innerHTML = '';
 
-      if (!url) return alert('Link gir!');
+            try {
+                const res = await fetch(API_URL + '/api/info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: link})
+                });
+                
+                const data = await res.json();
+                loading.classList.add('hidden');
 
-      result.innerHTML = `<p class="text-yellow-400 text-center">İşleniyor...</p>`;
+                if(data.error) {
+                    sonuc.innerHTML = `<p class="text-red-400">${data.error}</p>`;
+                    return;
+                }
 
-      try {
-        const res = await fetch('/download', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url })
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          result.innerHTML = `
-            <p class="text-green-400 font-bold mb-3">✅ Başarılı!</p>
-            <p class="mb-4 text-sm">${data.title}</p>
-            <a href="${data.download_url}" target="_blank" 
-               class="block text-center bg-green-600 hover:bg-green-500 py-4 rounded-2xl font-bold">
-               Videoyu İndir
-            </a>`;
-        } else {
-          result.innerHTML = `<p class="text-red-500">${data.error}</p>`;
+                sonuc.innerHTML = `<h3 class="font-bold mb-2">${data.title}</h3>`;
+                
+                data.formats.forEach(f => {
+                    sonuc.innerHTML += `
+                        <div class="flex justify-between bg-gray-700 p-2 rounded">
+                            <span>${f.quality}</span>
+                            <a href="${f.url}" target="_blank" class="bg-green-600 px-3 py-1 rounded text-sm">İndir</a>
+                        </div>
+                    `;
+                });
+            } catch(e) {
+                loading.classList.add('hidden');
+                sonuc.innerHTML = '<p class="text-red-400">Hata oluştu</p>';
+            }
         }
-      } catch (err) {
-        result.innerHTML = `<p class="text-red-500">Bağlantı hatası. Site yeni kurulduysa 30-60 saniye bekleyip tekrar dene.</p>`;
-      }
-    }
-  </script>
+    </script>
 </body>
 </html>
