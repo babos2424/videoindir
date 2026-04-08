@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT İndirici</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
+  <div class="max-w-md w-full p-8 bg-gray-900 rounded-3xl border border-gray-700">
+    <h1 class="text-3xl font-bold text-red-500 text-center mb-8">YouTube İndirici</h1>
+    
+    <input type="text" id="url" 
+           placeholder="YouTube linkini yapıştır..."
+           class="w-full px-5 py-4 bg-gray-800 rounded-2xl border border-gray-600 focus:border-red-500 outline-none mb-6">
+
+    <button onclick="indir()" 
+            class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-bold text-lg">
+      İndirme Linki Getir
+    </button>
+
+    <div id="result" class="mt-8"></div>
+  </div>
+
+  <script>
+    async function indir() {
+      const url = document.getElementById('url').value.trim();
+      const result = document.getElementById('result');
+
+      if (!url) return alert('Link gir!');
+
+      result.innerHTML = `<p class="text-yellow-400 text-center">İşleniyor...</p>`;
+
+      try {
+        const res = await fetch('/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          result.innerHTML = `
+            <p class="text-green-400 font-bold mb-3">✅ Başarılı!</p>
+            <p class="mb-4 text-sm">${data.title}</p>
+            <a href="${data.download_url}" target="_blank" 
+               class="block text-center bg-green-600 hover:bg-green-500 py-4 rounded-2xl font-bold">
+               Videoyu İndir
+            </a>`;
+        } else {
+          result.innerHTML = `<p class="text-red-500">${data.error}</p>`;
+        }
+      } catch (err) {
+        result.innerHTML = `<p class="text-red-500">Bağlantı hatası. Site yeni kurulduysa 30-60 saniye bekleyip tekrar dene.</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
