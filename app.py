@@ -1,45 +1,46 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import yt_dlp
-import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Frontend'in sorunsuz bağlanması için
 
-# Ana sayfa
 @app.route('/')
 def home():
     return send_from_directory('.', 'index.html')
 
-# Video linkini al ve indirme linki döndür
-@app.route('/download', methods=['POST'])
-def download():
+@app.route('/api/info', methods=['POST'])
+def get_info():
     data = request.get_json()
     url = data.get('url')
-
+    
     if not url:
-        return jsonify({'error': 'Link eksik'}), 400
+        return jsonify({'error': 'URL gerekli'}), 400
 
     try:
-        ydl_opts = {
-            'format': 'best',
-            'quiet': True,
-            'noplaylist': True,
-            'extract_flat': False,
-        }
-
+        ydl_opts = {'quiet': True, 'no_warnings': True, 'skip_download': True}
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            direct_url = info.get('url')
-            title = info.get('title', 'video')
-
+            
+            formats = []
+            # Sadece MP4 videoları al (720p, 1080p vb.)
+            for f in info['formats']:
+                if f.get('ext') == 'mp4' and f.get('height') and f.get('url'):
+                    formats.append({
+                        'format_id': f['format_id'],
+                        'quality': f"{f['height']}p",
+                        'url': f['url']  # Doğrudan indirme linki
+                    })
+            
             return jsonify({
-                'success': True,
-                'download_url': direct_url,
-                'title': title
+                'title': info['title'],
+                'thumbnail': info.get('thumbnail', ''),
+                'formats': formats
             })
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
