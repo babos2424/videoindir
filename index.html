@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MultiDown - Sosyal İndirici</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Tema Değiştir Butonu -->
+    <button id="themeToggle" class="theme-btn">
+      <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="header">
+      <h1>MultiDown</h1>
+      <p>Instagram • TikTok • Facebook • YouTube</p>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="urlInput" placeholder="Linki buraya yapıştır..." autocomplete="off">
+      <button onclick="analyzeLink()" class="analyze-btn">
+        <i class="fas fa-magic"></i> Analiz Et
+      </button>
+    </div>
+
+    <div id="result" class="result-area"></div>
+
+    <div class="platforms">
+      <i class="fab fa-instagram"></i>
+      <i class="fab fa-tiktok"></i>
+      <i class="fab fa-facebook"></i>
+      <i class="fab fa-youtube"></i>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
