@@ -1,100 +1,89 @@
-from flask import Flask, request, jsonify, render_template_string
-from flask_cors import CORS
-import requests
+from flask import Flask, render_template, request, jsonify
+import yt_dlp
+import re
 
 app = Flask(__name__)
-CORS(app)
+
+def detect_platform(url):
+    if 'instagram.com' in url or 'instagr.am' in url:
+        return 'instagram'
+    elif 'tiktok.com' in url or 'vm.tiktok.com' in url:
+        return 'tiktok'
+    elif 'facebook.com' in url or 'fb.watch' in url:
+        return 'facebook'
+    return None
 
 @app.route('/')
-def home():
-    with open('index.html', 'r', encoding='utf-8') as f:
-        return f.read()
+def index():
+    return render_template('index.html')
 
 @app.route('/api/info', methods=['POST'])
 def get_info():
     data = request.get_json()
     url = data.get('url')
     
-    if not url or ('youtube' not in url and 'youtu.be' not in url):
-        return jsonify({'error': 'Geçerli YouTube URLsi girin'}), 400
-
+    if not url:
+        return jsonify({'error': 'URL gerekli'}), 400
+    
+    platform = detect_platform(url)
+    if not platform:
+        return jsonify({'error': 'Sadece Instagram, TikTok ve Facebook desteklenir'}), 400
+    
     try:
-        # Step 1: Video bilgilerini al
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'skip_download': True,
         }
         
-        search_data = {'q': url, 'vt': 'home'}
-        r = requests.post('https://yt1s.com/api/ajaxSearch/index', 
-                         data=search_data, headers=headers, timeout=10)
-        
-        result = r.json()
-        
-        if result.get('status') != 'ok':
-            return jsonify({'error': 'Video bulunamadı veya bu video özel/kısıtlı'}), 400
-        
-        # Kaliteleri hazırla
-        formats = []
-        
-        # MP4ler
-        if 'mp4' in result.get('links', {}):
-            for key, item in result['links']['mp4'].items():
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            formats = []
+            
+            # En iyi kalite
+            if info.get('url'):
                 formats.append({
-                    'quality': item['q'],
-                    'size': item.get('size', 'Bilinmiyor'),
-                    'vid': result['vid'],
-                    'key': item['k'],
-                    'type': 'video'
+                    'url': info['url'],
+                    'quality': 'Orijinal Kalite',
+                    'type': 'video',
+                    'ext': info.get('ext', 'mp4')
                 })
-        
-        # MP3ler
-        if 'mp3' in result.get('links', {}):
-            for key, item in result['links']['mp3'].items():
-                formats.append({
+            
+            # Tüm formatlar
+            if 'formats' in info:
+                for f in info['formats']:
+                    if f.get('ext') in ['mp4', 'webm'] and f.get('height') and f.get('url'):
+                        formats.append({
+                            'url': f['url'],
+                            'quality': f"{f['height']}p",
+                            'type': 'video',
+                            'ext': f['ext']
+                        })
+            
+            # Ses (varsa)
+            if 'requested_formats' not in info and info.get('url'):
+                 formats.append({
+                    'url': info['url'],
                     'quality': 'Ses (MP3)',
-                    'size': item.get('size', 'Bilinmiyor'),
-                    'vid': result['vid'],
-                    'key': item['k'],
-                    'type': 'audio'
+                    'type': 'audio',
+                    'ext': 'mp3'
                 })
-
-        return jsonify({
-            'title': result.get('title', 'Video'),
-            'formats': formats
-        })
-
-    except Exception as e:
-        return jsonify({'error': f'API Hatası: {str(e)}'}), 500
-
-@app.route('/api/download', methods=['POST'])
-def download():
-    data = request.get_json()
-    vid = data.get('vid')
-    key = data.get('key')
-    
-    if not vid or not key:
-        return jsonify({'error': 'Eksik parametre'}), 400
-    
-    try:
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        
-        convert_data = {'vid': vid, 'k': key}
-        r = requests.post('https://yt1s.com/api/ajaxConvert/convert',
-                         data=convert_data, headers=headers, timeout=10)
-        
-        result = r.json()
-        
-        if result.get('dlink'):
-            return jsonify({'url': result['dlink']})
-        else:
-            return jsonify({'error': 'İndirme linki oluşturulamadı'}), 400
+            
+            return jsonify({
+                'title': info.get('title', 'Video'),
+                'thumbnail': info.get('thumbnail', ''),
+                'platform': platform,
+                'uploader': info.get('uploader', info.get('channel', 'Bilinmiyor')),
+                'duration': info.get('duration_string', ''),
+                'formats': formats[:6]
+            })
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        error_msg = str(e)
+        if "Sign in" in error_msg or "confirm" in error_msg:
+            return jsonify({'error': 'Bu platform şu an erişimi kısıtlı. Başka bir link deneyin.'}), 500
+        return jsonify({'error': error_msg}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    app.run(debug=True, host='0.0.0.0', port=10000)
