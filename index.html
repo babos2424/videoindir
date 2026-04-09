@@ -1,126 +1,379 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube İndirici</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Video İndirici</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0f172a',
+                            card: 'rgba(30, 41, 59, 0.7)',
+                            border: 'rgba(148, 163, 184, 0.1)'
+                        },
+                        light: {
+                            bg: '#f8fafc',
+                            card: 'rgba(255, 255, 255, 0.8)',
+                            border: 'rgba(148, 163, 184, 0.2)'
+                        }
+                    },
+                    animation: {
+                        'gradient-x': 'gradient-x 15s ease infinite',
+                        'blob': 'blob 7s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out'
+                    },
+                    keyframes: {
+                        'gradient-x': {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        },
+                        'blob': {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        'fadeIn': {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-light {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .dark .gradient-text {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .animated-bg {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        .dark .animated-bg {
+            background: linear-gradient(-45deg, #1e3c72, #2a5298, #7e22ce, #1e3c72);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .platform-icon {
+            transition: all 0.3s ease;
+        }
+        
+        .platform-icon:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
+    </style>
 </head>
-<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-xl bg-gray-900 rounded-2xl shadow-2xl p-6 border border-gray-800">
-    <h1 class="text-3xl font-bold text-center mb-6 text-red-500">YouTube İndirici</h1>
-    
-    <div class="flex gap-2 mb-6">
-      <input type="text" id="link" placeholder="YouTube linki..." 
-        class="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500">
-      <button onclick="ara()" id="btn" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">Ara</button>
+<body class="min-h-screen transition-colors duration-300 animated-bg relative overflow-x-hidden">
+
+    <!-- Theme Toggle -->
+    <div class="fixed top-6 right-6 z-50">
+        <button onclick="toggleTheme()" class="glass dark:glass-light p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group">
+            <i class="fas fa-sun text-yellow-500 text-xl hidden dark:block group-hover:rotate-180 transition-transform duration-500"></i>
+            <i class="fas fa-moon text-slate-700 text-xl block dark:hidden group-hover:-rotate-12 transition-transform duration-300"></i>
+        </button>
     </div>
 
-    <div id="loading" class="hidden text-center text-yellow-400 mb-4">Yükleniyor...</div>
-    <div id="error" class="hidden text-center text-red-400 mb-4"></div>
-    
-    <div id="result" class="hidden">
-      <h2 id="title" class="text-lg font-bold mb-4 text-center border-b border-gray-700 pb-2"></h2>
-      <div id="formats" class="space-y-2"></div>
+    <!-- Background Blobs -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob dark:bg-purple-900"></div>
+        <div class="absolute top-0 -right-4 w-72 h-72 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000 dark:bg-blue-900"></div>
+        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000 dark:bg-indigo-900"></div>
     </div>
-  </div>
 
-  <script>
-    async function ara() {
-      const link = document.getElementById('link').value;
-      const btn = document.getElementById('btn');
-      const loading = document.getElementById('loading');
-      const error = document.getElementById('error');
-      const result = document.getElementById('result');
-      
-      if(!link.includes('youtube') && !link.includes('youtu.be')) {
-        alert('Geçerli YouTube linki gir!');
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerText = 'Bekleyin...';
-      loading.classList.remove('hidden');
-      error.classList.add('hidden');
-      result.classList.add('hidden');
-
-      try {
-        const res = await fetch('/api/info', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({url: link})
-        });
+    <!-- Main Container -->
+    <div class="relative z-10 container mx-auto px-4 min-h-screen flex items-center justify-center py-12">
         
-        const data = await res.json();
-        
-        if(data.error) {
-          throw new Error(data.error);
+        <div class="w-full max-w-2xl">
+            
+            <!-- Header -->
+            <div class="text-center mb-8 animate-fade-in">
+                <h1 class="text-5xl md:text-6xl font-bold mb-4 gradient-text tracking-tight">
+                    Social Downloader
+                </h1>
+                <p class="text-slate-700 dark:text-slate-300 text-lg font-medium opacity-80">
+                    Instagram, TikTok ve Facebook videolarını hızlıca indir
+                </p>
+                
+                <!-- Platform Icons -->
+                <div class="flex justify-center gap-6 mt-6">
+                    <div class="platform-icon glass dark:glass-light p-4 rounded-2xl shadow-lg">
+                        <i class="fab fa-instagram text-3xl text-pink-600 dark:text-pink-400"></i>
+                    </div>
+                    <div class="platform-icon glass dark:glass-light p-4 rounded-2xl shadow-lg">
+                        <i class="fab fa-tiktok text-3xl text-black dark:text-white"></i>
+                    </div>
+                    <div class="platform-icon glass dark:glass-light p-4 rounded-2xl shadow-lg">
+                        <i class="fab fa-facebook text-3xl text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Card -->
+            <div class="glass dark:glass-light rounded-3xl p-8 shadow-2xl backdrop-blur-xl animate-fade-in" style="animation-delay: 0.1s">
+                
+                <!-- Input Area -->
+                <div class="relative mb-6 group">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="urlInput" 
+                            placeholder="Video linkini yapıştır (Instagram, TikTok, Facebook)..."
+                            class="w-full px-6 py-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border-2 border-transparent focus:border-purple-500 dark:focus:border-purple-400 outline-none text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 transition-all duration-300 text-lg"
+                        >
+                        <div class="absolute right-4 top-1/2 transform -translate-y-1/2">
+                            <i class="fas fa-link text-slate-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detected Platform Badge -->
+                <div id="platformBadge" class="hidden mb-4 text-center">
+                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 dark:bg-slate-800/50 backdrop-blur text-sm font-semibold">
+                        <i id="platformIcon" class=""></i>
+                        <span id="platformText"></span>
+                    </span>
+                </div>
+
+                <!-- Download Button -->
+                <button 
+                    onclick="fetchVideo()" 
+                    id="downloadBtn"
+                    class="w-full relative overflow-hidden group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98]"
+                >
+                    <span class="relative z-10 flex items-center justify-center gap-2">
+                        <i class="fas fa-download"></i>
+                        <span id="btnText">Videoyu İndir</span>
+                    </span>
+                    <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                </button>
+
+                <!-- Loading State -->
+                <div id="loading" class="hidden mt-6 text-center">
+                    <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/20 dark:bg-slate-800/50 backdrop-blur">
+                        <div class="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span class="text-slate-700 dark:text-slate-200 font-medium">Video bilgileri alınıyor...</span>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="error" class="hidden mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-center backdrop-blur"></div>
+
+            </div>
+
+            <!-- Results Card -->
+            <div id="resultCard" class="hidden mt-6 glass dark:glass-light rounded-3xl p-6 shadow-2xl backdrop-blur-xl animate-fade-in">
+                
+                <!-- Video Info -->
+                <div class="flex gap-4 mb-6 p-4 rounded-2xl bg-white/30 dark:bg-slate-800/30">
+                    <img id="thumb" src="" alt="Thumbnail" class="w-24 h-24 object-cover rounded-xl shadow-lg hidden">
+                    <div class="flex-1">
+                        <h3 id="videoTitle" class="font-bold text-lg text-slate-800 dark:text-white line-clamp-2 mb-1"></h3>
+                        <p id="videoAuthor" class="text-sm text-slate-600 dark:text-slate-400 mb-1"></p>
+                        <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-500">
+                            <span id="videoDuration" class="bg-white/50 dark:bg-slate-700/50 px-2 py-1 rounded-md"></span>
+                            <span id="videoPlatform" class="capitalize bg-white/50 dark:bg-slate-700/50 px-2 py-1 rounded-md"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Options -->
+                <div class="space-y-3" id="formatList">
+                    <!-- Formats will be inserted here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
         }
 
-        document.getElementById('title').innerText = data.title;
-        const formatsDiv = document.getElementById('formats');
-        formatsDiv.innerHTML = '';
-
-        data.formats.forEach(f => {
-          const div = document.createElement('div');
-          div.className = 'flex justify-between items-center bg-gray-800 p-3 rounded-lg border border-gray-700';
-          
-          const info = document.createElement('div');
-          info.innerHTML = `<span class="font-bold">${f.quality}</span> <span class="text-gray-400 text-sm">${f.size}</span>`;
-          
-          const btn = document.createElement('button');
-          btn.className = f.type === 'audio' ? 'bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold' : 'bg-green-600 hover:bg-green-500 px-4 py-2 rounded text-sm font-bold';
-          btn.innerText = 'İndir';
-          btn.onclick = () => getLink(f.vid, f.key, btn);
-          
-          div.appendChild(info);
-          div.appendChild(btn);
-          formatsDiv.appendChild(div);
-        });
-
-        result.classList.remove('hidden');
-
-      } catch(e) {
-        error.innerText = 'Hata: ' + e.message;
-        error.classList.remove('hidden');
-      } finally {
-        loading.classList.add('hidden');
-        btn.disabled = false;
-        btn.innerText = 'Ara';
-      }
-    }
-
-    async function getLink(vid, key, btn) {
-      const originalText = btn.innerText;
-      btn.innerText = 'Hazırlanıyor...';
-      btn.disabled = true;
-
-      try {
-        const res = await fetch('/api/download', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({vid, key})
-        });
-        
-        const data = await res.json();
-        
-        if(data.url) {
-          window.open(data.url, '_blank');
-          btn.innerText = '✓ Açıldı';
-          btn.classList.remove('bg-green-600', 'bg-blue-600');
-          btn.classList.add('bg-gray-600');
-        } else {
-          throw new Error(data.error || 'Link alınamadı');
+        // Check saved theme
+        if (localStorage.theme === 'light') {
+            document.documentElement.classList.remove('dark');
         }
-      } catch(e) {
-        btn.innerText = 'Hata';
-        alert('İndirme linki oluşturulamadı: ' + e.message);
-        setTimeout(() => {
-          btn.innerText = originalText;
-          btn.disabled = false;
-        }, 2000);
-      }
-    }
-  </script>
+
+        // Platform Detection UI
+        const urlInput = document.getElementById('urlInput');
+        const platformBadge = document.getElementById('platformBadge');
+        const platformIcon = document.getElementById('platformIcon');
+        const platformText = document.getElementById('platformText');
+
+        urlInput.addEventListener('input', (e) => {
+            const url = e.target.value;
+            if (url.includes('instagram.com')) {
+                platformBadge.classList.remove('hidden');
+                platformIcon.className = 'fab fa-instagram text-pink-600 dark:text-pink-400';
+                platformText.textContent = 'Instagram';
+                platformText.className = 'text-pink-600 dark:text-pink-400';
+            } else if (url.includes('tiktok.com')) {
+                platformBadge.classList.remove('hidden');
+                platformIcon.className = 'fab fa-tiktok text-black dark:text-white';
+                platformText.textContent = 'TikTok';
+            } else if (url.includes('facebook.com') || url.includes('fb.watch')) {
+                platformBadge.classList.remove('hidden');
+                platformIcon.className = 'fab fa-facebook text-blue-600 dark:text-blue-400';
+                platformText.textContent = 'Facebook';
+                platformText.className = 'text-blue-600 dark:text-blue-400';
+            } else {
+                platformBadge.classList.add('hidden');
+            }
+        });
+
+        async function fetchVideo() {
+            const url = urlInput.value;
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const resultCard = document.getElementById('resultCard');
+            const btn = document.getElementById('downloadBtn');
+            const btnText = document.getElementById('btnText');
+
+            if (!url) {
+                alert('Lütfen bir link yapıştırın!');
+                return;
+            }
+
+            // Reset UI
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            resultCard.classList.add('hidden');
+            btn.disabled = true;
+            btnText.textContent = 'İşleniyor...';
+
+            try {
+                const response = await fetch('/api/info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({url: url})
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Display results
+                document.getElementById('videoTitle').textContent = data.title;
+                document.getElementById('videoAuthor').textContent = data.uploader;
+                document.getElementById('videoDuration').textContent = data.duration || 'Süresiz';
+                document.getElementById('videoPlatform').textContent = data.platform;
+                
+                if (data.thumbnail) {
+                    const thumb = document.getElementById('thumb');
+                    thumb.src = data.thumbnail;
+                    thumb.classList.remove('hidden');
+                }
+
+                // Generate format buttons
+                const formatList = document.getElementById('formatList');
+                formatList.innerHTML = '';
+
+                data.formats.forEach((format, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-4 rounded-xl bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-200 border border-white/20 dark:border-slate-700/50';
+                    
+                    const isAudio = format.type === 'audio';
+                    const colorClass = isAudio ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700';
+                    const icon = isAudio ? 'fa-music' : 'fa-video';
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full ${isAudio ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-green-100 dark:bg-green-900/30'} flex items-center justify-center">
+                                <i class="fas ${icon} ${isAudio ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-slate-800 dark:text-white">${format.quality}</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400 uppercase">${format.ext || 'mp4'}</div>
+                            </div>
+                        </div>
+                        <a href="${format.url}" target="_blank" 
+                           class="${colorClass} text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2">
+                            <i class="fas fa-download"></i>
+                            İndir
+                        </a>
+                    `;
+                    
+                    formatList.appendChild(div);
+                });
+
+                resultCard.classList.remove('hidden');
+                resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                btn.disabled = false;
+                btnText.textContent = 'Videoyu İndir';
+            }
+        }
+
+        // Enter key support
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                fetchVideo();
+            }
+        });
+    </script>
 </body>
 </html>
