@@ -7,42 +7,42 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-950 text-white min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-2xl bg-gray-900 rounded-2xl shadow-2xl p-6 border border-gray-800">
-    <h1 class="text-3xl font-bold text-center mb-2 text-red-500">YouTube İndirici</h1>
-    <p class="text-gray-400 text-center mb-6 text-sm">Video bilgileri çekiliyor...</p>
-
+  <div class="w-full max-w-xl bg-gray-900 rounded-2xl shadow-2xl p-6 border border-gray-800">
+    <h1 class="text-3xl font-bold text-center mb-6 text-red-500">YouTube İndirici</h1>
+    
     <div class="flex gap-2 mb-6">
       <input type="text" id="link" placeholder="YouTube linki..." 
         class="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-red-500">
-      <button onclick="ara()" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">Ara</button>
+      <button onclick="ara()" id="btn" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold">Ara</button>
     </div>
 
     <div id="loading" class="hidden text-center text-yellow-400 mb-4">Yükleniyor...</div>
+    <div id="error" class="hidden text-center text-red-400 mb-4"></div>
     
-    <div id="video-info" class="hidden mb-6">
-      <img id="thumb" class="w-full h-48 object-cover rounded-lg mb-4" src="" alt="Thumbnail">
-      <h2 id="title" class="text-xl font-bold mb-1"></h2>
-      <p id="uploader" class="text-gray-400 text-sm mb-4"></p>
+    <div id="result" class="hidden">
+      <h2 id="title" class="text-lg font-bold mb-4 text-center border-b border-gray-700 pb-2"></h2>
+      <div id="formats" class="space-y-2"></div>
     </div>
-
-    <div id="formats" class="space-y-2"></div>
   </div>
 
   <script>
     async function ara() {
       const link = document.getElementById('link').value;
+      const btn = document.getElementById('btn');
       const loading = document.getElementById('loading');
-      const info = document.getElementById('video-info');
-      const formats = document.getElementById('formats');
+      const error = document.getElementById('error');
+      const result = document.getElementById('result');
       
       if(!link.includes('youtube') && !link.includes('youtu.be')) {
         alert('Geçerli YouTube linki gir!');
         return;
       }
 
+      btn.disabled = true;
+      btn.innerText = 'Bekleyin...';
       loading.classList.remove('hidden');
-      info.classList.add('hidden');
-      formats.innerHTML = '';
+      error.classList.add('hidden');
+      result.classList.add('hidden');
 
       try {
         const res = await fetch('/api/info', {
@@ -52,37 +52,73 @@
         });
         
         const data = await res.json();
-        loading.classList.add('hidden');
-
+        
         if(data.error) {
-          formats.innerHTML = `<p class="text-red-400 text-center">${data.error}</p>`;
-          return;
+          throw new Error(data.error);
         }
 
-        // Bilgileri göster
-        document.getElementById('thumb').src = data.thumbnail;
         document.getElementById('title').innerText = data.title;
-        document.getElementById('uploader').innerText = data.uploader;
-        info.classList.remove('hidden');
+        const formatsDiv = document.getElementById('formats');
+        formatsDiv.innerHTML = '';
 
-        // Kaliteleri listele
         data.formats.forEach(f => {
-          const btnClass = f.type === 'audio' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-green-600 hover:bg-green-500';
-          const label = f.type === 'audio' ? '🎵 Ses' : '📹 ' + f.quality;
+          const div = document.createElement('div');
+          div.className = 'flex justify-between items-center bg-gray-800 p-3 rounded-lg border border-gray-700';
           
-          formats.innerHTML += `
-            <div class="flex justify-between items-center bg-gray-800 p-3 rounded-lg border border-gray-700">
-              <span class="font-semibold">${label}</span>
-              <a href="${f.url}" target="_blank" class="${btnClass} px-4 py-2 rounded text-sm font-bold transition">
-                İndir
-              </a>
-            </div>
-          `;
+          const info = document.createElement('div');
+          info.innerHTML = `<span class="font-bold">${f.quality}</span> <span class="text-gray-400 text-sm">${f.size}</span>`;
+          
+          const btn = document.createElement('button');
+          btn.className = f.type === 'audio' ? 'bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold' : 'bg-green-600 hover:bg-green-500 px-4 py-2 rounded text-sm font-bold';
+          btn.innerText = 'İndir';
+          btn.onclick = () => getLink(f.vid, f.key, btn);
+          
+          div.appendChild(info);
+          div.appendChild(btn);
+          formatsDiv.appendChild(div);
         });
 
+        result.classList.remove('hidden');
+
       } catch(e) {
+        error.innerText = 'Hata: ' + e.message;
+        error.classList.remove('hidden');
+      } finally {
         loading.classList.add('hidden');
-        formats.innerHTML = '<p class="text-red-400 text-center">Bir hata oluştu</p>';
+        btn.disabled = false;
+        btn.innerText = 'Ara';
+      }
+    }
+
+    async function getLink(vid, key, btn) {
+      const originalText = btn.innerText;
+      btn.innerText = 'Hazırlanıyor...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/download', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({vid, key})
+        });
+        
+        const data = await res.json();
+        
+        if(data.url) {
+          window.open(data.url, '_blank');
+          btn.innerText = '✓ Açıldı';
+          btn.classList.remove('bg-green-600', 'bg-blue-600');
+          btn.classList.add('bg-gray-600');
+        } else {
+          throw new Error(data.error || 'Link alınamadı');
+        }
+      } catch(e) {
+        btn.innerText = 'Hata';
+        alert('İndirme linki oluşturulamadı: ' + e.message);
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }, 2000);
       }
     }
   </script>
