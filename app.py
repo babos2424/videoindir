@@ -1,10 +1,11 @@
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request, jsonify, Response
 import yt_dlp
+import requests
 import re
 
 app = Flask(__name__)
 
-# HTML CSS JS - Hepsi burada
+# Tüm site tek dosyada
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="tr">
@@ -94,6 +95,8 @@ HTML_TEMPLATE = '''
             border-radius: 10px;
             margin-top: 15px;
             text-align: center;
+            font-size: 14px;
+            line-height: 1.5;
         }
         .result {
             display: none;
@@ -132,18 +135,18 @@ HTML_TEMPLATE = '''
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 20px;
+            padding: 14px 20px;
             background: white;
             border: 2px solid #e0e0e0;
             border-radius: 12px;
             margin-bottom: 10px;
-            text-decoration: none;
-            color: #333;
+            cursor: pointer;
             transition: all 0.2s;
         }
         .download-btn:hover {
             border-color: #667eea;
             background: #f8f9ff;
+            transform: translateX(5px);
         }
         .download-btn .quality {
             font-weight: bold;
@@ -152,7 +155,7 @@ HTML_TEMPLATE = '''
         .download-btn .action {
             background: #667eea;
             color: white;
-            padding: 6px 16px;
+            padding: 8px 20px;
             border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
@@ -241,13 +244,16 @@ HTML_TEMPLATE = '''
                 `;
                 
                 let linksHtml = '';
-                data.formats.forEach(f => {
+                data.formats.forEach((f, index) => {
                     const isAudio = f.type === 'audio';
+                    // Direkt indirme için /api/download kullan
+                    const downloadUrl = `/api/download?url=${encodeURIComponent(f.url)}&filename=video_${index}.mp4`;
+                    
                     linksHtml += `
-                        <a href="${f.url}" target="_blank" class="download-btn">
-                            <span class="quality">${f.quality} ${f.size || ''}</span>
+                        <div class="download-btn" onclick="window.location.href='${downloadUrl}'">
+                            <span class="quality">${f.quality}</span>
                             <span class="action">${isAudio ? 'Ses İndir' : 'Video İndir'}</span>
-                        </a>
+                        </div>
                     `;
                 });
                 
@@ -322,7 +328,7 @@ def get_info():
                     })
             
             formats.sort(key=lambda x: int(x['quality'][:-1]), reverse=True)
-            formats = formats[:3]  # En iyi 3
+            formats = formats[:3]
             
             # Ses
             audio_formats = [f for f in info.get('formats', []) 
@@ -346,8 +352,41 @@ def get_info():
             })
             
     except Exception as e:
-        print(f"HATA: {e}")
+        error_msg = str(e)
+        print(f"HATA: {error_msg}")
+        # Instagram/Facebook özel hata mesajı
+        if platform in ['instagram', 'facebook'] and ('robot' in error_msg.lower() or 'confirm' in error_msg.lower() or 'sign in' in error_msg.lower()):
+            return jsonify({'error': f'{platform.capitalize()} şu an erişimi kısıtlı. Sadece TikTok çalışıyor.'}), 500
         return jsonify({'error': 'Video bilgisi alınamadı. Linki kontrol et.'}), 500
+
+@app.route('/api/download')
+def download_video():
+    """Video dosyasını proxy edip direkt indirme olarak sunar"""
+    video_url = request.args.get('url')
+    filename = request.args.get('filename', 'video.mp4')
+    
+    if not video_url:
+        return 'URL gerekli', 400
+    
+    try:
+        # Video dosyasını stream olarak çek
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        r = requests.get(video_url, headers=headers, stream=True, timeout=30)
+        
+        # Response'u direkt indirme olarak ayarla
+        response = Response(
+            r.iter_content(chunk_size=8192),
+            content_type=r.headers.get('content-type', 'video/mp4'),
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Length': r.headers.get('content-length')
+            }
+        )
+        return response
+        
+    except Exception as e:
+        print(f"İndirme hatası: {e}")
+        return 'İndirme başarısız', 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
