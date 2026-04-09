@@ -155,4 +155,237 @@
                         type="text" 
                         id="urlInput" 
                         placeholder="Video linkini buraya yapıştır..."
-                        class="w-full pl-12 pr-4 py-5 rounded-2xl bg-white/50 
+                        class="w-full pl-12 pr-4 py-5 rounded-2xl bg-white/50 dark:bg-black/20 border-2 border-transparent focus:border-purple-500 outline-none text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-300 input-glow text-lg"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button 
+                onclick="downloadVideo()" 
+                id="downloadBtn"
+                class="w-full btn-shine bg-gradient-to-r from-purple-600 via-pink-600 to-red-500 hover:from-purple-700 hover:via-pink-700 hover:to-red-600 text-white font-bold py-5 px-8 rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            >
+                <i class="fas fa-cloud-download-alt text-xl" id="btnIcon"></i>
+                <span id="btnText">Videoyu İndir</span>
+            </button>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="hidden mt-8 text-center">
+                <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full glass">
+                    <div class="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-gray-600 dark:text-gray-300 font-medium">Video analiz ediliyor...</span>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-center animate-fade-in">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                <span id="errorText"></span>
+            </div>
+        </div>
+
+        <!-- Results Card -->
+        <div id="resultCard" class="hidden w-full max-w-3xl mt-8 glass dark:glass-light rounded-3xl p-6 md:p-8 shadow-2xl animate-slide-up">
+            
+            <!-- Video Info -->
+            <div class="flex flex-col md:flex-row gap-6 mb-6">
+                <div class="relative w-full md:w-48 h-48 flex-shrink-0 rounded-2xl overflow-hidden shadow-lg group">
+                    <img id="videoThumb" src="" alt="Thumbnail" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i class="fas fa-play text-white text-3xl"></i>
+                    </div>
+                    <div class="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-lg" id="durationBadge"></div>
+                </div>
+                
+                <div class="flex-1 flex flex-col justify-center">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="platformBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-purple-500 to-pink-500 text-white"></span>
+                    </div>
+                    <h2 id="videoTitle" class="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-2 line-clamp-2"></h2>
+                    <p id="videoAuthor" class="text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
+                        <i class="fas fa-user-circle"></i>
+                        <span></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Download Options -->
+            <div class="space-y-3" id="downloadOptions">
+                <!-- Options will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-12 text-center text-gray-400 dark:text-gray-600 text-sm animate-fade-in">
+            <p>© 2024 VidFetch Pro • Hızlı ve Güvenli Video İndirme</p>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        // Check saved theme
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // Platform Detection Visuals
+        const urlInput = document.getElementById('urlInput');
+        const icons = {
+            instagram: document.getElementById('icon-instagram'),
+            tiktok: document.getElementById('icon-tiktok'),
+            facebook: document.getElementById('icon-facebook')
+        };
+
+        urlInput.addEventListener('input', (e) => {
+            const url = e.target.value.toLowerCase();
+            
+            // Reset all
+            Object.values(icons).forEach(icon => {
+                icon.classList.remove('active', 'text-pink-600', 'text-black', 'text-blue-600', 'dark:text-pink-400', 'dark:text-white', 'dark:text-blue-400');
+                icon.classList.add('text-gray-300', 'dark:text-gray-600');
+            });
+
+            // Highlight detected
+            if (url.includes('instagram')) {
+                icons.instagram.classList.remove('text-gray-300', 'dark:text-gray-600');
+                icons.instagram.classList.add('active', 'text-pink-600', 'dark:text-pink-400');
+            } else if (url.includes('tiktok')) {
+                icons.tiktok.classList.remove('text-gray-300', 'dark:text-gray-600');
+                icons.tiktok.classList.add('active', 'text-black', 'dark:text-white');
+            } else if (url.includes('facebook') || url.includes('fb.watch')) {
+                icons.facebook.classList.remove('text-gray-300', 'dark:text-gray-600');
+                icons.facebook.classList.add('active', 'text-blue-600', 'dark:text-blue-400');
+            }
+        });
+
+        async function downloadVideo() {
+            const url = urlInput.value.trim();
+            const btn = document.getElementById('downloadBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            const loading = document.getElementById('loadingState');
+            const error = document.getElementById('errorMessage');
+            const result = document.getElementById('resultCard');
+
+            if (!url) {
+                showError('Lütfen bir video linki yapıştırın');
+                return;
+            }
+
+            // UI Reset
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            result.classList.add('hidden');
+            btn.disabled = true;
+            btnText.textContent = 'İşleniyor...';
+            btnIcon.classList.add('animate-bounce');
+
+            try {
+                const response = await fetch('/api/info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({url: url})
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Bir hata oluştu');
+                }
+
+                // Show Results
+                document.getElementById('videoTitle').textContent = data.title;
+                document.getElementById('videoAuthor').querySelector('span').textContent = data.uploader;
+                document.getElementById('videoThumb').src = data.thumbnail || '';
+                document.getElementById('durationBadge').textContent = data.duration || '--:--';
+                
+                const platformBadge = document.getElementById('platformBadge');
+                platformBadge.textContent = data.platform;
+                
+                // Platform specific colors
+                if (data.platform === 'instagram') {
+                    platformBadge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-purple-500 to-pink-500 text-white';
+                } else if (data.platform === 'tiktok') {
+                    platformBadge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black';
+                } else {
+                    platformBadge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-600 text-white';
+                }
+
+                // Generate download buttons
+                const optionsDiv = document.getElementById('downloadOptions');
+                optionsDiv.innerHTML = '';
+
+                data.formats.forEach((format, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-purple-500/50 transition-all duration-300 group';
+                    
+                    const isAudio = format.type === 'audio';
+                    const icon = isAudio ? 'fa-music' : 'fa-video';
+                    const colorClass = isAudio ? 'from-blue-500 to-blue-600' : 'from-green-500 to-emerald-600';
+                    const label = isAudio ? 'Ses (MP3)' : format.quality;
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center text-white shadow-lg">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800 dark:text-white text-lg">${label}</div>
+                                ${format.size ? `<div class="text-sm text-gray-500 dark:text-gray-400">${format.size}</div>` : ''}
+                            </div>
+                        </div>
+                        <a href="${format.url}" target="_blank" 
+                           class="bg-gradient-to-r ${colorClass} hover:shadow-lg text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                            <i class="fas fa-download"></i>
+                            İndir
+                        </a>
+                    `;
+                    
+                    optionsDiv.appendChild(div);
+                });
+
+                result.classList.remove('hidden');
+                result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                loading.classList.add('hidden');
+                btn.disabled = false;
+                btnText.textContent = 'Videoyu İndir';
+                btnIcon.classList.remove('animate-bounce');
+            }
+        }
+
+        function showError(msg) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = msg;
+            errorDiv.classList.remove('hidden');
+        }
+
+        // Enter key support
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                downloadVideo();
+            }
+        });
+    </script>
+</body>
+</html>
