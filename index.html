@@ -4,70 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MultiDown</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
-<body class="bg-gradient-to-br from-purple-950 via-black to-indigo-950 min-h-screen flex items-center justify-center text-white">
-  <div class="max-w-lg w-full mx-4">
-    <div class="text-center mb-10">
-      <h1 class="text-5xl font-black tracking-tighter bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-        MULTIDOWN
-      </h1>
-      <p class="text-purple-300 mt-2">Instagram • TikTok • Facebook • YouTube</p>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>MULTIDOWN</h1>
+      <p class="subtitle">Tüm sosyal medyadan video indir</p>
     </div>
 
-    <div class="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-      <input 
-        type="text" 
-        id="url" 
-        placeholder="Linki yapıştır..."
-        class="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 outline-none focus:border-purple-400 transition text-lg mb-6">
+    <div class="card">
+      <input type="text" id="url" placeholder="TikTok, Instagram, Facebook veya YouTube linkini yapıştır..." />
 
-      <button onclick="analyze()" 
-              class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-5 rounded-2xl font-bold text-lg hover:scale-105 active:scale-95 transition shadow-xl">
-        ANALİZ ET
+      <button onclick="analyze()" class="btn">
+        <i class="fas fa-magic"></i> ANALİZ ET
       </button>
     </div>
 
-    <div id="result" class="mt-10"></div>
+    <div id="result" class="result"></div>
   </div>
 
-  <script>
-    async function analyze() {
-      const url = document.getElementById("url").value.trim();
-      const result = document.getElementById("result");
-
-      if (!url) return alert("Lütfen bir link yapıştırın!");
-
-      result.innerHTML = `<p class="text-center text-purple-400 py-16">Analiz ediliyor...</p>`;
-
-      try {
-        const res = await fetch('/api/info', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({url})
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          result.innerHTML = `
-            <div class="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-6">
-              ${data.thumbnail ? `<img src="${data.thumbnail}" class="rounded-2xl mb-6 w-full shadow-lg">` : ''}
-              <p class="font-medium text-lg mb-6 line-clamp-2">${data.title}</p>
-              <a href="${data.download_url}" 
-                 download 
-                 target="_blank"
-                 class="block text-center bg-green-500 hover:bg-green-400 text-black py-5 rounded-2xl font-bold text-lg transition shadow-lg">
-                ⬇️ VIDEoyu İNDİR
-              </a>
-            </div>`;
-        } else {
-          result.innerHTML = `<p class="text-red-400 text-center py-12">${data.error || 'Bu platform şu anda desteklenmiyor.'}</p>`;
-        }
-      } catch (e) {
-        result.innerHTML = `<p class="text-red-400 text-center py-12">Bağlantı hatası oluştu.</p>`;
-      }
-    }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
