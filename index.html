@@ -3,39 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MultiDown - Sosyal İndirici</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <title>MultiDown</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <div class="container">
-    <!-- Tema Değiştir Butonu -->
-    <button id="themeToggle" class="theme-btn">
-      <i class="fas fa-moon"></i>
+<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
+  <div class="max-w-md w-full bg-gray-900 p-8 rounded-3xl border border-gray-700">
+    <h1 class="text-4xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">MultiDown</h1>
+    <p class="text-center text-gray-400 mb-8">Instagram, TikTok, Facebook, YouTube</p>
+
+    <input type="text" id="url" 
+           placeholder="Linki yapıştır..." 
+           class="w-full px-6 py-4 bg-gray-800 rounded-2xl border border-gray-600 focus:border-purple-500 outline-none mb-6">
+
+    <button onclick="analyze()" 
+            class="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition">
+      Analiz Et
     </button>
 
-    <div class="header">
-      <h1>MultiDown</h1>
-      <p>Instagram • TikTok • Facebook • YouTube</p>
-    </div>
-
-    <div class="input-area">
-      <input type="text" id="urlInput" placeholder="Linki buraya yapıştır..." autocomplete="off">
-      <button onclick="analyzeLink()" class="analyze-btn">
-        <i class="fas fa-magic"></i> Analiz Et
-      </button>
-    </div>
-
-    <div id="result" class="result-area"></div>
-
-    <div class="platforms">
-      <i class="fab fa-instagram"></i>
-      <i class="fab fa-tiktok"></i>
-      <i class="fab fa-facebook"></i>
-      <i class="fab fa-youtube"></i>
-    </div>
+    <div id="result" class="mt-8"></div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    async function analyze() {
+      const url = document.getElementById("url").value.trim();
+      const result = document.getElementById("result");
+
+      if (!url) return alert("Link gir!");
+
+      result.innerHTML = `<p class="text-purple-400 text-center">İşleniyor...</p>`;
+
+      try {
+        const res = await fetch('/api/info', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({url})
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          result.innerHTML = `
+            <div class="bg-gray-800 p-5 rounded-2xl">
+              ${data.thumbnail ? `<img src="${data.thumbnail}" class="rounded-xl mb-4 w-full">` : ''}
+              <p class="font-semibold mb-4">${data.title}</p>
+              <a href="${data.download_url}" target="_blank" 
+                 class="block text-center bg-green-500 py-4 rounded-2xl font-bold text-black">
+                İndir
+              </a>
+            </div>`;
+        } else {
+          result.innerHTML = `<p class="text-red-500 text-center">${data.error || 'Hata oluştu'}</p>`;
+        }
+      } catch (e) {
+        result.innerHTML = `<p class="text-red-500 text-center">Sunucu hatası</p>`;
+      }
+    }
+  </script>
 </body>
 </html>
