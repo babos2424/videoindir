@@ -1,56 +1,71 @@
-from flask import Flask, render_template_string
-import os
+from flask import Flask, request, jsonify, render_template_string
+from flask_cors import CORS
+import requests
+import re
 
 app = Flask(__name__)
+CORS(app)
 
-HTML_CODE = '''
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube İndirici</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-xl bg-gray-900 rounded-2xl shadow-2xl p-8 border border-gray-800 text-center">
-    <h1 class="text-3xl font-bold mb-2 text-red-500">YouTube İndirici</h1>
-    <p class="text-gray-400 mb-8">Linki yapıştır ve SaveFrom.net\'e git</p>
-
-    <input 
-      type="text" 
-      id="link" 
-      placeholder="https://youtube.com/watch?v=..."
-      class="w-full px-5 py-4 bg-gray-800 border border-gray-700 rounded-xl mb-4 focus:outline-none focus:border-red-500 text-lg text-center">
-    
-    <button onclick="yönlendir()" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-bold text-xl transition mb-4">
-      SaveFrom.net'de Aç
-    </button>
-    
-    <p class="text-gray-500 text-sm mt-4">Butona basınca otomatik yönlendirileceksiniz</p>
-  </div>
-
-  <script>
-    function yönlendir() {
-      const link = document.getElementById("link").value.trim();
-      
-      if(!link.includes("youtube") && !link.includes("youtu.be")) {
-        alert("Geçerli YouTube linki girin!");
-        return;
-      }
-      
-      // SaveFrom.net'e yönlendir
-      const hedef = "https://savefrom.net/?url=" + encodeURIComponent(link);
-      window.open(hedef, '_blank');
-    }
-  </script>
-</body>
-</html>
-'''
+def get_video_id(url):
+    # YouTube URL'sinden ID çıkar
+    if 'youtu.be' in url:
+        return url.split('/')[-1].split('?')[0]
+    if 'v=' in url:
+        return url.split('v=')[1].split('&')[0]
+    return None
 
 @app.route('/')
 def home():
-    return render_template_string(HTML_CODE)
+    return render_template_string(open('index.html').read())
+
+@app.route('/api/info', methods=['POST'])
+def get_info():
+    data = request.get_json()
+    url = data.get('url')
+    
+    video_id = get_video_id(url)
+    if not video_id:
+        return jsonify({'error': 'Geçersiz URL'}), 400
+
+    try:
+        # Piped API - YouTube'un alternatifi, Render'dan erişilebilir
+        api_url = f"https://pipedapi.moomoo.me/streams/{video_id}"
+        response = requests.get(api_url, timeout=10)
+        data = response.json()
+
+        if 'error' in data:
+            return jsonify({'error': 'Video bulunamadı veya özel'}), 404
+
+        # Video kalitelerini ayıkla
+        formats = []
+        
+        # Video + Ses birleşik (MP4)
+        for stream in data.get('videoStreams', []):
+            if stream.get('url') and stream.get('quality'):
+                formats.append({
+                    'quality': stream['quality'].replace('p', '') + 'p',
+                    'url': stream['url'],
+                    'type': 'video'
+                })
+
+        # Sadece Ses (MP3/Audio)
+        for stream in data.get('audioStreams', []):
+            if stream.get('url'):
+                formats.append({
+                    'quality': 'Ses (MP3)',
+                    'url': stream['url'],
+                    'type': 'audio'
+                })
+
+        return jsonify({
+            'title': data.get('title', 'Video'),
+            'thumbnail': data.get('thumbnailUrl', ''),
+            'uploader': data.get('uploader', 'Bilinmiyor'),
+            'formats': formats
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
